@@ -3,8 +3,9 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TrafficLight, EmergencyVehicle, TrafficDensity } from '@/types/traffic';
-import { MapPin, AlertTriangle, Clock, Navigation } from 'lucide-react';
+import { MapPin, AlertTriangle, Clock, Navigation, Route, Trash2, Save, Play } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -24,6 +25,87 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ apiKey }) => {
   const [trafficLights, setTrafficLights] = useState<TrafficLight[]>([]);
   const [emergencyVehicles, setEmergencyVehicles] = useState<EmergencyVehicle[]>([]);
   const [trafficDensity, setTrafficDensity] = useState<TrafficDensity[]>([]);
+  
+  // Emergency route drawing state
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [selectedVehicleType, setSelectedVehicleType] = useState<'ambulance' | 'fire' | 'police'>('ambulance');
+  const [drawingPath, setDrawingPath] = useState<{ lat: number; lng: number }[]>([]);
+  const [currentDrawingLine, setCurrentDrawingLine] = useState<any>(null);
+  const [drawnRoutes, setDrawnRoutes] = useState<{
+    id: string;
+    type: 'ambulance' | 'fire' | 'police';
+    path: { lat: number; lng: number }[];
+    polyline: any;
+  }[]>([]);
+
+  // Helper function to get vehicle color
+  const getVehicleColor = (type: 'ambulance' | 'fire' | 'police') => {
+    switch (type) {
+      case 'ambulance': return '#ef4444'; // Red for ambulance
+      case 'fire': return '#f97316'; // Orange for fire truck
+      case 'police': return '#3b82f6'; // Blue for police
+      default: return '#ef4444';
+    }
+  };
+
+  // Emergency route drawing functions
+  const startDrawing = () => {
+    setIsDrawingMode(true);
+    setDrawingPath([]);
+    if (currentDrawingLine) {
+      currentDrawingLine.setMap(null);
+      setCurrentDrawingLine(null);
+    }
+  };
+
+  const finishDrawing = () => {
+    if (drawingPath.length >= 2) {
+      const routeId = `route-${Date.now()}`;
+      const newRoute = {
+        id: routeId,
+        type: selectedVehicleType,
+        path: [...drawingPath],
+        polyline: currentDrawingLine
+      };
+      
+      setDrawnRoutes(prev => [...prev, newRoute]);
+      
+      // Create emergency vehicle for this route
+      const newVehicle: EmergencyVehicle = {
+        id: `${selectedVehicleType}-${Date.now()}`,
+        type: selectedVehicleType,
+        position: drawingPath[0],
+        destination: drawingPath[drawingPath.length - 1],
+        status: 'dispatched',
+        priority: 'high',
+        estimatedArrival: new Date(Date.now() + 10 * 60000) // 10 minutes ETA
+      };
+      
+      setEmergencyVehicles(prev => [...prev, newVehicle]);
+    }
+    
+    setIsDrawingMode(false);
+    setDrawingPath([]);
+    setCurrentDrawingLine(null);
+  };
+
+  const cancelDrawing = () => {
+    if (currentDrawingLine) {
+      currentDrawingLine.setMap(null);
+    }
+    setIsDrawingMode(false);
+    setDrawingPath([]);
+    setCurrentDrawingLine(null);
+  };
+
+  const clearAllRoutes = () => {
+    drawnRoutes.forEach(route => {
+      if (route.polyline) {
+        route.polyline.setMap(null);
+      }
+    });
+    setDrawnRoutes([]);
+  };
 
   // Initialize traffic lights at main junctions in Kottakal
   useEffect(() => {
@@ -180,6 +262,46 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ apiKey }) => {
         trafficLayer.setMap(map.current);
 
         setIsLoaded(true);
+        
+        // Add click listener for drawing emergency routes
+        map.current.addListener('click', (event: any) => {
+          if (isDrawingMode) {
+            const clickedPoint = {
+              lat: event.latLng.lat(),
+              lng: event.latLng.lng()
+            };
+            
+            setDrawingPath(prev => {
+              const newPath = [...prev, clickedPoint];
+              
+              // Update the polyline with new path
+              if (currentDrawingLine) {
+                currentDrawingLine.setPath(newPath);
+              } else {
+                const newPolyline = new window.google.maps.Polyline({
+                  path: newPath,
+                  geodesic: true,
+                  strokeColor: getVehicleColor(selectedVehicleType),
+                  strokeOpacity: 0.8,
+                  strokeWeight: 4,
+                  icons: [{
+                    icon: {
+                      path: window.google.maps.SymbolPath.FORWARD_OPEN_ARROW,
+                      scale: 4,
+                      strokeColor: getVehicleColor(selectedVehicleType)
+                    },
+                    offset: '100%',
+                    repeat: '50px'
+                  }],
+                  map: map.current
+                });
+                setCurrentDrawingLine(newPolyline);
+              }
+              
+              return newPath;
+            });
+          }
+        });
       }
     };
 
@@ -188,7 +310,7 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ apiKey }) => {
     return () => {
       document.head.removeChild(script);
     };
-  }, [apiKey]);
+  }, [apiKey, isDrawingMode, selectedVehicleType, drawingPath, currentDrawingLine]);
 
   useEffect(() => {
     if (!isLoaded || !map.current) return;
@@ -373,6 +495,110 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ apiKey }) => {
                 </p>
               </div>
             ))}
+          </div>
+        </Card>
+
+        {/* Emergency Route Drawing */}
+        <Card className="p-4 bg-card border-border">
+          <h3 className="font-semibold mb-3 text-foreground flex items-center gap-2">
+            <Route className="h-4 w-4 text-emergency" />
+            Draw Emergency Route
+          </h3>
+          
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Vehicle Type</label>
+              <Select 
+                value={selectedVehicleType} 
+                onValueChange={(value: 'ambulance' | 'fire' | 'police') => setSelectedVehicleType(value)}
+              >
+                <SelectTrigger className="bg-input border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ambulance">🚑 Ambulance</SelectItem>
+                  <SelectItem value="fire">🚒 Fire Truck</SelectItem>
+                  <SelectItem value="police">🚓 Police</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2">
+              {!isDrawingMode ? (
+                <Button 
+                  onClick={startDrawing}
+                  className="flex-1 bg-emergency hover:bg-emergency/90 text-foreground"
+                  size="sm"
+                >
+                  <Route className="mr-2 h-4 w-4" />
+                  Start Drawing
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    onClick={finishDrawing}
+                    className="flex-1 bg-traffic-low hover:bg-traffic-low/90 text-background"
+                    size="sm"
+                    disabled={drawingPath.length < 2}
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    Finish
+                  </Button>
+                  <Button 
+                    onClick={cancelDrawing}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {isDrawingMode && (
+              <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                Click on the map to draw route points. Need at least 2 points to finish.
+                <br />Current points: {drawingPath.length}
+              </div>
+            )}
+
+            {drawnRoutes.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Active Routes ({drawnRoutes.length})
+                  </span>
+                  <Button
+                    onClick={clearAllRoutes}
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-1">
+                  {drawnRoutes.map(route => (
+                    <div key={route.id} className="flex items-center justify-between p-2 bg-secondary rounded text-xs">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: getVehicleColor(route.type) }}
+                        />
+                        <span className="text-foreground">
+                          {route.type === 'ambulance' ? '🚑' : route.type === 'fire' ? '🚒' : '🚓'} 
+                          {route.type.charAt(0).toUpperCase() + route.type.slice(1)}
+                        </span>
+                      </div>
+                      <span className="text-muted-foreground">
+                        {route.path.length} points
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 
