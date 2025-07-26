@@ -25,31 +25,87 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ apiKey }) => {
   const [emergencyVehicles, setEmergencyVehicles] = useState<EmergencyVehicle[]>([]);
   const [trafficDensity, setTrafficDensity] = useState<TrafficDensity[]>([]);
 
-  // Initialize sample data for Kottakal
+  // Initialize traffic lights at main junctions in Kottakal
   useEffect(() => {
-    const sampleTrafficLights: TrafficLight[] = [
+    const mainJunctionTrafficLights: TrafficLight[] = [
       {
         id: 'tl-001',
-        name: 'Kottakal Main Junction',
-        position: { lat: 11.0510, lng: 75.9949 },
+        name: 'Arya Vaidya Sala Main Junction',
+        position: { lat: 11.0510, lng: 75.9949 }, // Near the famous Ayurvedic center
         status: 'green',
         timing: { red: 60, yellow: 10, green: 90 },
         lastUpdated: new Date()
       },
       {
         id: 'tl-002',
-        name: 'Hospital Road',
-        position: { lat: 11.0520, lng: 75.9939 },
+        name: 'NH-66 Kottakal Junction',
+        position: { lat: 11.0495, lng: 75.9932 }, // Main highway intersection
         status: 'red',
-        timing: { red: 45, yellow: 8, green: 75 },
+        timing: { red: 75, yellow: 10, green: 105 },
         lastUpdated: new Date()
       },
       {
         id: 'tl-003',
-        name: 'Market Street',
-        position: { lat: 11.0500, lng: 75.9959 },
+        name: 'Hospital Road-Market Junction',
+        position: { lat: 11.0525, lng: 75.9965 }, // Hospital and market area
         status: 'yellow',
-        timing: { red: 50, yellow: 10, green: 80 },
+        timing: { red: 50, yellow: 8, green: 85 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 'tl-004',
+        name: 'Malappuram-Tirur Road Junction',
+        position: { lat: 11.0535, lng: 75.9920 }, // Main road connecting to other towns
+        status: 'green',
+        timing: { red: 65, yellow: 10, green: 95 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 'tl-005',
+        name: 'Railway Station Junction',
+        position: { lat: 11.0480, lng: 75.9955 }, // Near railway connectivity
+        status: 'red',
+        timing: { red: 55, yellow: 8, green: 80 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 'tl-006',
+        name: 'Bus Stand Circle',
+        position: { lat: 11.0515, lng: 75.9975 }, // Main bus terminal area
+        status: 'green',
+        timing: { red: 45, yellow: 8, green: 75 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 'tl-007',
+        name: 'College Road Junction',
+        position: { lat: 11.0545, lng: 75.9940 }, // Educational institutions area
+        status: 'yellow',
+        timing: { red: 40, yellow: 8, green: 70 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 'tl-008',
+        name: 'Industrial Area Junction',
+        position: { lat: 11.0465, lng: 75.9920 }, // Industrial zone access
+        status: 'green',
+        timing: { red: 60, yellow: 10, green: 90 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 'tl-009',
+        name: 'Bypass Road Entry',
+        position: { lat: 11.0490, lng: 75.9890 }, // New bypass road connection
+        status: 'red',
+        timing: { red: 70, yellow: 10, green: 100 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 'tl-010',
+        name: 'Police Station Junction',
+        position: { lat: 11.0520, lng: 75.9930 }, // Law enforcement area
+        status: 'green',
+        timing: { red: 50, yellow: 8, green: 80 },
         lastUpdated: new Date()
       }
     ];
@@ -83,7 +139,7 @@ const TrafficMap: React.FC<TrafficMapProps> = ({ apiKey }) => {
       }
     ];
 
-    setTrafficLights(sampleTrafficLights);
+    setTrafficLights(mainJunctionTrafficLights);
     setEmergencyVehicles(sampleEmergencyVehicles);
     setTrafficDensity(sampleTrafficDensity);
   }, []);

@@ -30,7 +30,7 @@ const TrafficDashboard: React.FC = () => {
     totalVehicles: 1247,
     activeIncidents: 3,
     emergencyVehicles: 2,
-    trafficLights: 12,
+    trafficLights: 10, // Updated to reflect the 10 main junctions
     averageSpeed: 23,
     congestionLevel: 68
   });
@@ -235,7 +235,7 @@ const TrafficDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Traffic Lights</span>
               <Badge variant="outline" className="text-traffic-low border-traffic-low">
-                12/12 Online
+                10/10 Online
               </Badge>
             </div>
             <div className="flex items-center justify-between">
